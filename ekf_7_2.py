@@ -22,15 +22,15 @@ s = 0.
 h = 0.001
 g = 32.2
 
-ukf = kf.KalmanFilter(dim_x=2,dim_z=1)
+ekf = kf.KalmanFilter(dim_x=2,dim_z=1)
 
-ukf.F = np.zeros((2,2))  # PHI
-ukf.x = np.array([[200025],[-6150.]]) #xh, xdh
-ukf.Q = np.zeros((2,2))
-ukf.P = np.array([[signoise**2, 0.],
+ekf.F = np.zeros((2,2))  # PHI
+ekf.x = np.array([[200025],[-6150.]]) #xh, xdh
+ekf.Q = np.zeros((2,2))
+ekf.P = np.array([[signoise**2, 0.],
                   [0, 20000.]])
 
-ukf.H = np.array([[1., 0.]])
+ekf.H = np.array([[1., 0.]])
 
 
 def acc(x,vel):
@@ -71,14 +71,14 @@ while t < tf:
         print(t)
         s = 0
 
-        x   = ukf.x[0,0]
-        vel = ukf.x[1,0]
+        x   = ekf.x[0,0]
+        vel = ekf.x[1,0]
 
         rho_h = .0034*math.exp(-x/22000.)
         f21 = -g*rho_h*vel*vel/(44000*beta)
         f22 = rho_h * g * vel/beta
 
-        ukf.F = np.array([[1., ts],
+        ekf.F = np.array([[1., ts],
                          [f21*ts, 1 + f22*ts]])
 
 
@@ -86,16 +86,16 @@ while t < tf:
         ts_2 = (ts**2) / 2
 
 
-        ukf.Q[0,0] = ts_3
-        ukf.Q[0,1] = ts_2 + f22*ts_3
-        ukf.Q[1,0] = ukf.Q[0,1]
-        ukf.Q[1,1] = ts + f22*(ts**2) + (f22**2) * ts_3
-        ukf.Q *= phis
+        ekf.Q[0,0] = ts_3
+        ekf.Q[0,1] = ts_2 + f22*ts_3
+        ekf.Q[1,0] = ekf.Q[0,1]
+        ekf.Q[1,1] = ts + f22*(ts**2) + (f22**2) * ts_3
+        ekf.Q *= phis
 
-        ukf.predict()
+        ekf.predict()
         z = np.array([[pos[0] + random.randn()*30000.]])
-        ukf.update(z)
-        fs.append(ukf.x[0,0])
+        ekf.update(z)
+        fs.append(ekf.x[0,0])
 
         fzs.append(z)
 
