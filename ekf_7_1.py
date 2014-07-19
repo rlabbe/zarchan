@@ -20,11 +20,8 @@ h = 0.001
 g = 32.2
 
 
-
-
-def acc(x,vel):
+def acc(x,vel, beta):
     return .0034*g*vel*vel*math.exp(-x/22000.)/(2.*beta) - g
-
 
 
 def project_falling_position(X, h):
@@ -33,11 +30,11 @@ def project_falling_position(X, h):
     x = x_old = X[0]
     xd = xd_old= X[1]
 
-    xdd = acc(x,xd)
+    xdd = acc(x, xd, beta)
     x += xd*h
     xd += xdd*h
 
-    xdd = acc(x,xd)
+    xdd = acc(x, xd, beta)
     x = .5*(x_old + x + xd*h)
     xd = .5*(xd_old + xd + xdd*h)
 

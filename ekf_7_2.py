@@ -10,7 +10,7 @@ import numpy as np
 import math
 import numpy.random as random
 import matplotlib.pyplot as plt
-from ekf_7_1 import project_falling_position
+from ekf_7_1 import project_falling_position, acc
 
 
 
@@ -45,6 +45,27 @@ poss = []
 fzs = []
 fs = []
 
+
+def project (ekf, tp, ts, beta):
+    """ replaces the predict step of the kalman filter. Fixes the divergence
+    problem in Zarchan's filter. This is equivelent to the code in listing
+    7.5 """
+    
+    t = 0
+    x = ekf.x[0,0]
+    xd = ekf.x[1,0]
+    H = .001
+    while t <= ts-0.0001:
+        xdd = acc(x, xd, beta)
+        xd += H*xdd
+        x  += H*xd
+        t += h
+        
+    ekf.x[0,0] = x
+    ekf.x[1,0] = xd
+
+
+
 while t < tf:
     pos = project_falling_position(pos, h)
     # step time
@@ -77,6 +98,11 @@ while t < tf:
         ekf.Q *= phis
 
         ekf.predict()
+        # to fix divergence, comment call ekf.predict(), and uncomment
+        # line below.
+        #project(ekf, t, ts, beta)
+
+        
         z = np.array([[pos[0] + random.randn()*signoise]])
         ekf.update(z)
         fs.append(ekf.x[0,0])
@@ -84,6 +110,8 @@ while t < tf:
         fzs.append(z)
 
 
+
+        
 
 times = [i*ts for i in range(len(fs))]
 p1 = plt.scatter (times, fzs,color='red')
