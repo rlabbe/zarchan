@@ -43,18 +43,19 @@ def project_falling_position(X, h):
 
     return (x,xd)
 
-pos = (200000., -6000)
-while t < tf and pos[0]>0:
-    pos = project_falling_position(pos, h)
-
-
-    # step time
-    t += h
-    s += h
-    if s >= ts-0.00001:
-        s = 0
-
-        plt.scatter (t, pos[0])
+if __name__ == '__main__':
+    pos = (200000., -6000)
+    while t < tf and pos[0]>0:
+        pos = project_falling_position(pos, h)
+    
+    
+        # step time
+        t += h
+        s += h
+        if s >= ts-0.00001:
+            s = 0
+    
+            plt.scatter (t, pos[0])
 
 
 

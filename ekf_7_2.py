@@ -10,13 +10,19 @@ import numpy as np
 import math
 import numpy.random as random
 import matplotlib.pyplot as plt
+from ekf_7_1 import project_falling_position
+
+
+
+""" This is the first EKF in the text. It diverges for reasons discussed
+in the text. It is not a good filter."""
 
 
 signoise = 1000.
 beta = 500
 ts = 0.1 # time step, dt in my world
-tf = 50.  #end time
-phis = 0.
+tf = 30.  #end time
+phis = 0. # spectral noise in Q. set to 100 to avoid divergence in filter
 t = 0.   # time
 s = 0.
 h = 0.001
@@ -31,28 +37,6 @@ ekf.P = np.array([[signoise**2, 0.],
                   [0, 20000.]])
 
 ekf.H = np.array([[1., 0.]])
-
-
-def acc(x,vel):
-    return .0034*g*vel*vel*math.exp(-x/22000.)/(2.*beta) - g
-
-
-
-def project_falling_position(X, h):
-    """ 2nd order runge kutta projection of a falling object in air"""
-
-    x = x_old = X[0]
-    xd = xd_old= X[1]
-
-    xdd = acc(x,xd)
-    x += xd*h
-    xd += xdd*h
-
-    xdd = acc(x,xd)
-    x = .5*(x_old + x + xd*h)
-    xd = .5*(xd_old + xd + xdd*h)
-
-    return (x,xd)
 
 
 
@@ -93,7 +77,7 @@ while t < tf:
         ekf.Q *= phis
 
         ekf.predict()
-        z = np.array([[pos[0] + random.randn()*30000.]])
+        z = np.array([[pos[0] + random.randn()*signoise]])
         ekf.update(z)
         fs.append(ekf.x[0,0])
 
@@ -101,7 +85,7 @@ while t < tf:
 
 
 
-times = [x/ts for x in range(len(poss))]
+times = [i*ts for i in range(len(fs))]
 p1 = plt.scatter (times, fzs,color='red')
 p2, = plt.plot(times, fs, 'green')
 p3, = plt.plot(times, poss, 'blue')
