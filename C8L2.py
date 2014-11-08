@@ -113,19 +113,13 @@ while T <= TF:
         Q[1,2] = F23*PHIS*TS*TS/2.
         Q[2,1] = Q[1,2]
         Q[2,2] = PHIS*TS
-        PHIT = PHI.T
-        PHIP = dot(PHI,P)
-        PHIPPHIT =dot(PHIP,PHIT)
-        M = PHIPPHIT+Q
-        HM = dot(HMAT,M)
-        HMHT = dot(HM,HT)
-        HMHTR = HMHT+RMAT
-        HMHTRINV = inv(HMHTR)
-        MHT = dot(M,HT)
-        GAIN = dot(HMHTRINV,MHT)
-        KH = dot(GAIN,HMAT)
-        IKH = IDNP-KH
+
+        M = dot(PHI, P).dot(PHI.T) + Q
+        HMHTR = dot(HMAT, M).dot(HT)+RMAT
+        GAIN = dot(M,dot(HT, inv(HMHTR)))
+        IKH = IDNP - dot(GAIN,HMAT)
         P = dot(IKH,M)
+
         XNOISE = SIGNOISE*randn()
         BETAH = 1./BETAINVH
         (XB,XDB,XDDB) = project2(T,TS,XH,XDH,BETAH,HP)
@@ -177,5 +171,3 @@ plt.plot(ArrayT,ArrayERRBETAINV,ArrayT,ArraySP33,ArrayT,ArraySP33P)#,grid
 plt.xlabel('Time (Sec)')
 plt.ylabel('Error in Estimate of 1/BETA (Ft^2/Lb)')
 plt.axis([0, 30, -.0008, .0008])
-
-
