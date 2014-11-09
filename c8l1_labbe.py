@@ -3,14 +3,19 @@
 Created on Sat Nov  8 15:55:47 2014
 
 @author: rlabbe
+
+
+This is an implementation of the kalman filter used in listing 1 of chapter 8
+of Zarchan's Fundamental of Kalman Filtering, Third Edition. It simulates an
+object falling from high in the atmosphere where we do not know the ballistic
+coefficient.
+
+I have changed it significantly from Zarchan's implemention in that I am
+using my filterpy library rather than hard coding the filter equations.
+
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Nov  8 09:40:44 2014
 
-@author: rlabbe
-"""
 
 
 import numpy as np
@@ -20,7 +25,7 @@ from numpy.linalg import inv
 from numpy.random import randn
 from math import sqrt
 from kalman import ExtendedKalmanFilter
-from C8_simulate_fall import simulate_fall
+from c8_sim import simulate_fall
 
 #np.random.seed(1234)
 
@@ -110,7 +115,7 @@ kf.H = array([[1., 0., 0,]])
 
 # create nominal data for comparison
 beta = 500.
-data = simulate_fall(200000., -6000., beta, dt)
+data = simulate_fall(200000., -6000., beta, dt, sim_time=30.)
 
 
 #storage for results
