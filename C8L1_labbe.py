@@ -24,40 +24,9 @@ from kalman import ExtendedKalmanFilter
 
 np.random.seed(1234)
 
-def dot(a,b):
-    """ ndarrays can't handle treating 1x1 array ([[1.]]) as a scalar,
-    so handle it for it. sigh.
-    """
-
-    if a.shape == (1,1):
-        return np.dot(a[0,0],b)
-    if b.shape == (1,1):
-        return np.dot(a,b[0,0])
-
-    return np.dot(a,b)
-
-def dot3(a,b,c):
-    return dot(a,dot(b,c))
-
-
-def project2(TP,dt,XP,XDP,beta_sim,HP):
-    t = 0.
-    x_sim = XP
-    xd_sim = XDP
-    sim_dt = HP
-    while t <= (dt-.0001):
-        XDD = .0034*32.2*xd_sim*xd_sim*exp(-x_sim/22000.)/(2.*beta_sim)-32.2
-        xd_sim = xd_sim + sim_dt*XDD
-        x_sim = x_sim + sim_dt*xd_sim
-        t = t + sim_dt
-
-    return x_sim, xd_sim, XDD
-
-
 
 sig_noise = 25.
 var = sig_noise**2
-
 
 
 class DragKalmanFilter(ExtendedKalmanFilter):
@@ -83,53 +52,6 @@ class DragKalmanFilter(ExtendedKalmanFilter):
 
         self._x[0,0] = x
         self._x[1,0] = xd
-
-
-
-kf = DragKalmanFilter(dim_x=3, dim_z=1)
-
-kf._x = array([[200025., -6150., 800.]]).T
-
-kf.P = array([[var,    0,       0],
-              [0, 20000.,       0],
-              [0,      0, 300.**2]])
-
-kf.R *= var
-kf.Q *= 0.
-kf.H = array([[1., 0., 0,]])
-
-
-
-# state of simulation
-x_sim = 200000.
-xd_sim = -6000.
-beta_sim = 500.
-
-
-dt = .1
-time_end = 30.
-t = 0.
-sim_t = 0.
-sim_dt = .001
-HP = .001  # integration interval
-
-
-ArrayT = []
-ArrayX = []
-ArrayXH = []
-ArrayXD = []
-ArrayXDH = []
-Arraybeta = []
-ArraybetaH = []
-ArrayERRX = []
-ArraySP11 = []
-ArraySP11P = []
-ArrayERRXD = []
-ArraySP22 = []
-ArraySP22P = []
-ArrayERRbeta = []
-ArraySP33 = []
-ArraySP33P = []
 
 
 def FQ_jacobians(X):
@@ -163,61 +85,123 @@ def Hx(x):
     return x[0,0]
 
 
+dt = .1
+
+
+kf = DragKalmanFilter(dim_x=3, dim_z=1, dt=dt)
+
+kf._x = array([[200025., -6150., 800.]]).T
+
+kf.P = array([[var,    0,       0],
+              [0, 20000.,       0],
+              [0,      0, 300.**2]])
+
+kf.R *= var
+kf.Q *= 0.
+kf.H = array([[1., 0., 0,]])
+
+
+
+# state of simulation
+x_sim = 200000.
+xd_sim = -6000.
+beta = 500.
+
+
+
+
+ArrayT = []
+ArrayX = []
+ArrayXH = []
+ArrayXD = []
+ArrayXDH = []
+Arraybeta = []
+ArraybetaH = []
+ArrayERRX = []
+ArraySP11 = []
+ArraySP11P = []
+ArrayERRXD = []
+ArraySP22 = []
+ArraySP22P = []
+ArrayERRbeta = []
+ArraySP33 = []
+ArraySP33P = []
+
+
+
+def simulate_fall(x, xd, beta, step):
+    data = []
+    
+    t = 0.
+    sim_t = 0.
+    dt = 0.001
+    
+    time_end = 30.
+    while t <= time_end:
+        x_old = x
+        xd_old = xd
+        
+        xdd = .0034*32.2*xd*xd*exp(-x/22000.)/(2.*beta)-32.2
+        x  += dt*xd
+        xd += dt*xdd
+        t  += dt
+        
+        xdd = .0034*32.2*xd*xd*exp(-x/22000.)/(2.*beta)-32.2
+        x   = .5*(x_old  + x  + dt*xd)
+        xd  = .5*(xd_old + xd + dt*xdd)
+        
+        sim_t += dt
+        if sim_t >= step - .00001:  
+            data.append(array([x, xd]))
+            sim_t = 0.
+    return np.asarray(data)
+
+
+data = simulate_fall(x_sim, xd_sim, beta, dt)
+
+
 print('labbe')
-count = 0
-while t <= time_end:
-    XOLD = x_sim
-    XDOLD = xd_sim
-    XDD = .0034*32.2*xd_sim*xd_sim*exp(-x_sim/22000.)/(2.*beta_sim)-32.2
-    x_sim = x_sim + sim_dt*xd_sim
-    xd_sim = xd_sim + sim_dt*XDD
-    t = t + sim_dt
-    XDD = .0034*32.2*xd_sim*xd_sim*exp(-x_sim/22000.)/(2.*beta_sim)-32.2
-    x_sim = .5*(XOLD + x_sim + sim_dt*xd_sim)
-    xd_sim = .5*(XDOLD + xd_sim + sim_dt*XDD)
-    sim_t = sim_t + sim_dt
-    if sim_t >= (dt-.00001):
 
-        sim_t = 0.
+t = 0.
+for d in data:
+    kf.F, kf.Q = FQ_jacobians(kf._x)
 
-        kf.F, kf.Q = FQ_jacobians(kf._x)
-        kf.Q *= PHI_s
-
-        z = array([[x_sim + sig_noise*randn()]])
-
-        #print('z=', z)
-        kf.predict(kf.x)
-        kf.update(z, HJacobian, Hx)
+    z = array([[d[0] + sig_noise*randn()]])
+    kf.predict(kf.x)
+    kf.update(z, HJacobian, Hx)
 
 
 
-        err_x = x_sim - kf.x[0,0]
-        SP11 = sqrt(kf.P[0,0])
-        err_xd = xd_sim - kf.x[1,0]
-        SP22 = sqrt(kf.P[1,1])
-        err_beta = beta_sim -  kf.x[2,0]
-        SP33 = sqrt(kf.P[2,2])
-        SP11P = -SP11
-        SP22P = -SP22
-        SP33P = -SP33
+    # compute everything needed for the plots
+    err_x = d[0] - kf.x[0,0]
+    SP11 = sqrt(kf.P[0,0])
+    err_xd = d[1] - kf.x[1,0]
+    SP22 = sqrt(kf.P[1,1])
+    err_beta = beta -  kf.x[2,0]
+    SP33 = sqrt(kf.P[2,2])
+    SP11P = -SP11
+    SP22P = -SP22
+    SP33P = -SP33
 
 
-        ArrayT.append(t)
-        ArrayX.append(x_sim)
-        ArrayXH.append(kf.x[0,0])
-        ArrayXD.append(xd_sim)
-        ArrayXDH.append(kf.x[1,0])
-        Arraybeta.append(beta_sim)
-        ArraybetaH.append(kf.x[2,0])
-        ArrayERRX.append(err_x)
-        ArraySP11.append(SP11)
-        ArraySP11P.append(-SP11)
-        ArrayERRXD.append(err_xd)
-        ArraySP22.append(SP22)
-        ArraySP22P.append(-SP22)
-        ArrayERRbeta.append(err_beta)
-        ArraySP33.append(SP33)
-        ArraySP33P.append(-SP33)
+    ArrayT.append(t)
+    ArrayX.append(x_sim)
+    ArrayXH.append(kf.x[0,0])
+    ArrayXD.append(xd_sim)
+    ArrayXDH.append(kf.x[1,0])
+    Arraybeta.append(beta)
+    ArraybetaH.append(kf.x[2,0])
+    ArrayERRX.append(err_x)
+    ArraySP11.append(SP11)
+    ArraySP11P.append(-SP11)
+    ArrayERRXD.append(err_xd)
+    ArraySP22.append(SP22)
+    ArraySP22P.append(-SP22)
+    ArrayERRbeta.append(err_beta)
+    ArraySP33.append(SP33)
+    ArraySP33P.append(-SP33)
+    
+    t += dt
 
 
 
