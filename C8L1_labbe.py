@@ -20,9 +20,9 @@ from numpy.linalg import inv
 from numpy.random import randn
 from math import sqrt
 from kalman import ExtendedKalmanFilter
+from C8_simulate_fall import simulate_fall
 
-
-np.random.seed(1234)
+#np.random.seed(1234)
 
 
 sig_noise = 25.
@@ -36,10 +36,10 @@ class DragKalmanFilter(ExtendedKalmanFilter):
         ExtendedKalmanFilter.__init__(self, dim_x, dim_z, dim_u)
         self.dt = dt
 
-    def predict_x(self, lin_x):
-        x    = lin_x[0,0]
-        xd   = lin_x[1,0]
-        beta = lin_x[2,0]
+    def predict_x(self, X):
+        x    = X[0,0]
+        xd   = X[1,0]
+        beta = X[2,0]
         sim_dt = .001
         g = 32.2
 
@@ -55,6 +55,15 @@ class DragKalmanFilter(ExtendedKalmanFilter):
 
 
 def FQ_jacobians(X):
+    """ Computes F jabobian and the process noise (Q) given the state X.
+
+    Returns
+    -------
+    (F,Q) : ndarray, ndarray
+
+        F and Q matrices
+    """
+
     x    = X[0,0]
     xd   = X[1,0]
     beta = X[2,0]
@@ -97,19 +106,14 @@ kf.P = array([[var,    0,       0],
               [0,      0, 300.**2]])
 
 kf.R *= var
-kf.Q *= 0.
 kf.H = array([[1., 0., 0,]])
 
-
-
-# state of simulation
-x_sim = 200000.
-xd_sim = -6000.
+# create nominal data for comparison
 beta = 500.
+data = simulate_fall(200000., -6000., beta, dt)
 
 
-
-
+#storage for results
 ArrayT = []
 ArrayX = []
 ArrayXH = []
@@ -127,41 +131,6 @@ ArrayERRbeta = []
 ArraySP33 = []
 ArraySP33P = []
 
-
-
-def simulate_fall(x, xd, beta, step):
-    data = []
-    
-    t = 0.
-    sim_t = 0.
-    dt = 0.001
-    
-    time_end = 30.
-    while t <= time_end:
-        x_old = x
-        xd_old = xd
-        
-        xdd = .0034*32.2*xd*xd*exp(-x/22000.)/(2.*beta)-32.2
-        x  += dt*xd
-        xd += dt*xdd
-        t  += dt
-        
-        xdd = .0034*32.2*xd*xd*exp(-x/22000.)/(2.*beta)-32.2
-        x   = .5*(x_old  + x  + dt*xd)
-        xd  = .5*(xd_old + xd + dt*xdd)
-        
-        sim_t += dt
-        if sim_t >= step - .00001:  
-            data.append(array([x, xd]))
-            sim_t = 0.
-    return np.asarray(data)
-
-
-data = simulate_fall(x_sim, xd_sim, beta, dt)
-
-
-print('labbe')
-
 t = 0.
 for d in data:
     kf.F, kf.Q = FQ_jacobians(kf._x)
@@ -171,23 +140,19 @@ for d in data:
     kf.update(z, HJacobian, Hx)
 
 
-
     # compute everything needed for the plots
-    err_x = d[0] - kf.x[0,0]
-    SP11 = sqrt(kf.P[0,0])
-    err_xd = d[1] - kf.x[1,0]
-    SP22 = sqrt(kf.P[1,1])
-    err_beta = beta -  kf.x[2,0]
-    SP33 = sqrt(kf.P[2,2])
-    SP11P = -SP11
-    SP22P = -SP22
-    SP33P = -SP33
+    err_x    = d[0] - kf.x[0,0]
+    err_xd   = d[1] - kf.x[1,0]
+    err_beta = beta - kf.x[2,0]
 
+    SP11 = sqrt(kf.P[0,0])  # std dev in x
+    SP22 = sqrt(kf.P[1,1])  # std dev in vel
+    SP33 = sqrt(kf.P[2,2])  # std dev in beta
 
     ArrayT.append(t)
-    ArrayX.append(x_sim)
+    ArrayX.append(d[0])
     ArrayXH.append(kf.x[0,0])
-    ArrayXD.append(xd_sim)
+    ArrayXD.append(d[1])
     ArrayXDH.append(kf.x[1,0])
     Arraybeta.append(beta)
     ArraybetaH.append(kf.x[2,0])
@@ -200,7 +165,7 @@ for d in data:
     ArrayERRbeta.append(err_beta)
     ArraySP33.append(SP33)
     ArraySP33P.append(-SP33)
-    
+
     t += dt
 
 
@@ -218,9 +183,10 @@ plt.xlabel('Time (Sec)')
 plt.ylabel('Error in Estimate of Velocity (Ft/Sec)')
 plt.axis([0, 30, -25, 25])
 
+'''
 plt.subplot(313)
 plt.plot(ArrayT,ArrayERRbeta,ArrayT,ArraySP33,ArrayT,ArraySP33P)
 plt.xlabel('Time (Sec)')
 plt.ylabel('Error in Estimate of Ballistic Coefficient (Lb/Ft^2)')
-
+'''
 plt.show()

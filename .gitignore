@@ -1,1 +1,4 @@
-.pyc
+*.pyc
+basic/
+fortran/
+matlab/

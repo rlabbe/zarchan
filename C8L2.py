@@ -84,7 +84,7 @@ ArraySP22P = []
 ArrayERRBETAINV = []
 ArraySP33 = []
 ArraySP33P = []
-count = 0
+
 
 while T <= TF: 
     XOLD = X
@@ -126,18 +126,18 @@ while T <= TF:
         RES = X+XNOISE-XB
         XH = XB+GAIN[0,0]*RES
         XDH = XDB+GAIN[1,0]*RES
-        BETAINVH = BETAINVH+GAIN[2,0]*RES
-        ERRX = X-XH
+
         SP11 = sqrt(P[0,0])
-        ERRXD = XD-XDH
         SP22 = sqrt(P[1,1])
-        ERRBETAINV = 1./BETA-BETAINVH
         SP33 = sqrt(P[2,2])
+
+        ERRX = X-XH
+        ERRXD = XD-XDH
+
+        BETAINVH = BETAINVH+GAIN[2,0]*RES
+        ERRBETAINV = 1./BETA-BETAINVH
         BETAH = 1./BETAINVH
-        SP11P = -SP11
-        SP22P = -SP22
-        SP33P = -SP33
-        count = count+1
+
         ArrayT.append(T)
         ArrayX.append(X)
         ArrayXH.append(XH)
@@ -147,13 +147,13 @@ while T <= TF:
         ArrayBETAH.append(BETAH)
         ArrayERRX.append(ERRX)
         ArraySP11.append(SP11)
-        ArraySP11P.append(SP11P)
+        ArraySP11P.append(-SP11)
         ArrayERRXD.append(ERRXD)
         ArraySP22.append(SP22)
-        ArraySP22P.append(SP22P)
+        ArraySP22P.append(-SP22)
         ArrayERRBETAINV.append(ERRBETAINV)
         ArraySP33.append(SP33)
-        ArraySP33P.append(SP33P)
+        ArraySP33P.append(-SP33)
 
 
 

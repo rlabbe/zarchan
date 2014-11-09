@@ -10,25 +10,28 @@ import numpy as np
 from numpy import zeros, array, eye, exp
 import matplotlib.pyplot as plt
 from numpy.linalg import inv
-from numpy. random import randn
+from numpy.random import randn
 from math import sqrt
+
+
+np.random.seed(1234)
 
 
 def dot(a,b):
     """ ndarrays can't handle treating 1x1 array ([[1.]]) as a scalar,
     so handle it for it. sigh.
     """
-    
+
     if a.shape == (1,1):
         return np.dot(a[0,0],b)
     if b.shape == (1,1):
         return np.dot(a,b[0,0])
-    
+
     return np.dot(a,b)
-    
+
 def dot3(a,b,c):
     return dot(a,dot(b,c))
-    
+
 
 def project2(TP,dt,XP,XDP,beta_sim,HP):
     t = 0.
@@ -45,7 +48,7 @@ def project2(TP,dt,XP,XDP,beta_sim,HP):
 
 
 
-ITERM = 2
+ITERM = 1
 sig_noise = 25.
 
 # state of simulation
@@ -69,7 +72,7 @@ HP = .001  # integration interval
 F = zeros((order,order))
 
 
-ArrayT = []   
+ArrayT = []
 ArrayX = []
 ArrayXH = []
 ArrayXD = []
@@ -95,7 +98,7 @@ HT = H.T
 R = sig_noise**2
 
 
-
+count = 0
 while t <= time_end:
     XOLD = x_sim
     XDOLD = xd_sim
@@ -136,9 +139,10 @@ while t <= time_end:
         Q *= PHI_s
 
 
-        #predict        
+        #predict
         XNOISE = sig_noise*randn()
-        (XB,XDB,XDDB) = project2(t,dt,x_hat,xd_hat,beta_hat,HP)
+        (XB,XDB,XBETA) = project2(t,dt,x_hat,xd_hat,beta_hat,HP)
+        print ('xpre',XB,XDB,XBETA)
         M = dot3(F, P, F.T) + Q
 
         # update
@@ -146,15 +150,21 @@ while t <= time_end:
         gain = dot3(M, HT, inv(S))
         IKH = IDNP-dot(gain, H)
         P = dot(IKH, M)
+        #print ('P=', P)
 
         residual = x_sim + XNOISE-XB
-        
+
         # X state [x_sim, x_sim', beta_sim]
         x_hat = XB + gain[0,0]*residual
         xd_hat = XDB + gain[1,0]*residual
         beta_hat = beta_hat + gain[2,0]*residual
 
 
+        count += 1
+        #if count == 5:
+        #    break
+
+        print (x_hat, xd_hat, beta_hat)
         err_x = x_sim-x_hat
         SP11 = sqrt(P[0,0])
         err_xd = xd_sim-xd_hat
@@ -165,8 +175,7 @@ while t <= time_end:
         SP22P = -SP22
         SP33P = -SP33
 
-        
-        
+
         ArrayT.append(t)
         ArrayX.append(x_sim)
         ArrayXH.append(x_hat)
@@ -183,7 +192,7 @@ while t <= time_end:
         ArrayERRbeta.append(err_beta)
         ArraySP33.append(SP33)
         ArraySP33P.append(-SP33)
-        
+
 
 
 
@@ -204,4 +213,4 @@ plt.plot(ArrayT,ArrayERRbeta,ArrayT,ArraySP33,ArrayT,ArraySP33P)
 plt.xlabel('Time (Sec)')
 plt.ylabel('Error in Estimate of Ballistic Coefficient (Lb/Ft^2)')
 
-        
+plt.show()
